@@ -1,0 +1,35 @@
+const { execFile } = require('node:child_process');
+const { promisify } = require('node:util');
+const run = promisify(execFile);
+
+async function ps(script, env = {}) {
+  const { stdout } = await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { windowsHide: true, maxBuffer: 4 * 1024 * 1024, env: { ...process.env, ...env } });
+  const value = String(stdout).trim(); return value ? JSON.parse(value) : {};
+}
+const win32 = "$code=@'\nusing System; using System.Runtime.InteropServices; public static class AgentWindow { [DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr h); [DllImport(\"user32.dll\")] public static extern bool ShowWindow(IntPtr h,int n); [DllImport(\"user32.dll\")] public static extern bool PostMessage(IntPtr h,uint m,IntPtr w,IntPtr l); }\n'@; if(-not ('AgentWindow' -as [type])){Add-Type -TypeDefinition $code};";
+
+function createDesktopTools() { return [
+  { name: 'applications.search', description: 'Find installed Windows applications by query. Returns apps usable by applications.open.', permissions: ['desktop.inspect'], async execute(input = {}) {
+    if (!input.query?.trim()) throw new Error('applications.search requires query.');
+    return ps(`$q=$env:DA_QUERY;$a=@();try{$a+=Get-StartApps|?{$_.Name -like "*$q*"}|%{[pscustomobject]@{name=$_.Name;id=$_.AppID;kind='appx'}}}catch{};$roots=@([Environment]::GetFolderPath('CommonStartMenu'),[Environment]::GetFolderPath('StartMenu'));foreach($r in $roots){if(Test-Path $r){Get-ChildItem -LiteralPath $r -Filter *.lnk -Recurse -ErrorAction SilentlyContinue|?{$_.BaseName -like "*$q*"}|select -First 25|%{$a+=[pscustomobject]@{name=$_.BaseName;id=$_.FullName;kind='shortcut'}}}};[pscustomobject]@{ok=$true;apps=@($a|sort name -Unique|select -First 30);output=('Found '+@($a).Count+' application match(es).')}|ConvertTo-Json -Depth 4 -Compress`, { DA_QUERY: input.query.trim() });
+  }},
+  { name: 'applications.open', description: 'Launch an application from applications.search. Input: appId and kind.', permissions: ['windows.open'], async execute(input = {}) {
+    if (!input.appId) throw new Error('applications.open requires appId.');
+    return ps(`if($env:DA_KIND -eq 'appx'){Start-Process "shell:AppsFolder\\$env:DA_APP"}else{Start-Process -LiteralPath $env:DA_APP};[pscustomobject]@{ok=$true;output='Application launch requested.'}|ConvertTo-Json -Compress`, { DA_APP: input.appId, DA_KIND: input.kind || 'shortcut' });
+  }},
+  { name: 'windows.list', description: 'List visible application windows, optionally matching query.', permissions: ['desktop.inspect'], async execute(input = {}) {
+    const raw = await ps(`$q=$env:DA_QUERY;Get-Process|?{$_.MainWindowHandle -ne 0 -and $_.MainWindowTitle}|%{[pscustomobject]@{handle=$_.MainWindowHandle.ToInt64();pid=$_.Id;title=$_.MainWindowTitle;process=$_.ProcessName}}|?{!$q -or $_.title -like "*$q*" -or $_.process -like "*$q*"}|select -First 40|ConvertTo-Json -Compress`, { DA_QUERY: input.query || '' });
+    const windows = Array.isArray(raw) ? raw : raw.handle ? [raw] : []; return { ok: true, windows, output: `Found ${windows.length} visible window(s).` };
+  }},
+  { name: 'windows.focus', description: 'Focus a window. Input: handle.', permissions: ['desktop.control'], async execute(input = {}) { if (!input.handle) throw new Error('windows.focus requires handle.'); return ps(`${win32}$h=[IntPtr]::new([Int64]$env:DA_HANDLE);[AgentWindow]::ShowWindow($h,9)|Out-Null;$ok=[AgentWindow]::SetForegroundWindow($h);[pscustomobject]@{ok=[bool]$ok;output='Focus requested.'}|ConvertTo-Json -Compress`, { DA_HANDLE: String(input.handle) }); }},
+  { name: 'windows.close', description: 'Close a window. Input: handle.', permissions: ['desktop.control'], async execute(input = {}) { if (!input.handle) throw new Error('windows.close requires handle.'); return ps(`${win32}$h=[IntPtr]::new([Int64]$env:DA_HANDLE);$ok=[AgentWindow]::PostMessage($h,0x0010,[IntPtr]::Zero,[IntPtr]::Zero);[pscustomobject]@{ok=[bool]$ok;output='Close request sent.'}|ConvertTo-Json -Compress`, { DA_HANDLE: String(input.handle) }); }},
+  { name: 'ui.inspect', description: 'Read accessible controls in a window. Returns selectors for UI actions.', permissions: ['desktop.inspect'], async execute(input = {}) { if (!input.handle) throw new Error('ui.inspect requires handle.'); return ps(`Add-Type -AssemblyName UIAutomationClient;Add-Type -AssemblyName UIAutomationTypes;$r=[System.Windows.Automation.AutomationElement]::FromHandle([IntPtr]::new([Int64]$env:DA_HANDLE));if(!$r){throw 'Window unavailable to UI Automation.'};$a=@();foreach($e in @($r.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition)|select -First 120)){try{if($e.Current.Name -or $e.Current.AutomationId){$a += [pscustomobject]@{selector=[pscustomobject]@{automationId=$e.Current.AutomationId;name=$e.Current.Name};name=$e.Current.Name;automationId=$e.Current.AutomationId;controlType=$e.Current.ControlType.ProgrammaticName}}}catch{}};[pscustomobject]@{ok=$true;controls=@($a);output=('Found '+@($a).Count+' accessible controls.')}|ConvertTo-Json -Depth 5 -Compress`, { DA_HANDLE: String(input.handle) }); }},
+  { name: 'ui.focus', description: 'Focus accessible control. Input: handle and selector.', permissions: ['desktop.control'], async execute(input = {}) { return ui(input, 'focus'); }},
+  { name: 'ui.invoke', description: 'Invoke/click accessible control. Input: handle and selector.', permissions: ['desktop.control'], async execute(input = {}) { return ui(input, 'invoke'); }},
+  { name: 'ui.set_value', description: 'Set accessible text control. Input: handle, selector, value.', permissions: ['desktop.control'], async execute(input = {}) { return ui(input, 'setValue'); }}
+]; }
+async function ui(input, operation) {
+  if (!input.handle || !input.selector) throw new Error(`ui.${operation} requires handle and selector.`);
+  return ps(`Add-Type -AssemblyName UIAutomationClient;Add-Type -AssemblyName UIAutomationTypes;$r=[System.Windows.Automation.AutomationElement]::FromHandle([IntPtr]::new([Int64]$env:DA_HANDLE));$s=$env:DA_SELECTOR|ConvertFrom-Json;$p=if($s.automationId){[System.Windows.Automation.AutomationElement]::AutomationIdProperty}else{[System.Windows.Automation.AutomationElement]::NameProperty};$v=if($s.automationId){$s.automationId}else{$s.name};$e=$r.FindFirst([System.Windows.Automation.TreeScope]::Descendants,(New-Object System.Windows.Automation.PropertyCondition($p,[string]$v)));if(!$e){throw 'UI control not found.'};switch($env:DA_OP){'focus'{$e.SetFocus()}'invoke'{($e.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()}'setValue'{($e.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)).SetValue($env:DA_VALUE)}};[pscustomobject]@{ok=$true;output=('UI '+$env:DA_OP+' completed.')}|ConvertTo-Json -Compress`, { DA_HANDLE: String(input.handle), DA_SELECTOR: JSON.stringify(input.selector), DA_OP: operation, DA_VALUE: input.value || '' });
+}
+module.exports = { createDesktopTools };

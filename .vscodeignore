@@ -1,0 +1,10 @@
+.env
+.env.*
+artifacts/**
+src/**
+scripts/**
+test/**
+docs/**
+.vscode/**
+computer-profile*.json
+*.vsix

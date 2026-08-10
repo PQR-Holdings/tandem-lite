@@ -1,0 +1,13 @@
+{
+  "objective": "Complete the requested task in the selected application, then stop.",
+  "actions": ["OPEN_APPLICATION", "OPEN_SYSTEM_SETTINGS", "OPEN_TERMINAL", "OPEN_BROWSER", "UIA_INVOKE", "UIA_SET_VALUE", "UIA_FOCUS", "CLOSE_WINDOW", "CLOSE_TAB", "PRESS_ENTER", "PRESS_ESCAPE", "PRESS_TAB", "TYPE_TEXT", "CLICK", "DOUBLE_CLICK", "DRAG", "SCROLL", "WAIT"],
+  "confirmActions": ["CLOSE_WINDOW", "CLOSE_TAB"],
+  "bindings": {
+    "PRESS_ENTER": { "key": "ENTER", "holdMs": 60 },
+    "PRESS_ESCAPE": { "key": "ESC", "holdMs": 60 },
+    "PRESS_TAB": { "key": "TAB", "holdMs": 60 },
+    "TYPE_TEXT": { "holdMs": 60 },
+    "CLOSE_WINDOW": { "sequence": ["ALT", "F4"], "holdMs": 80 },
+    "CLOSE_TAB": { "sequence": ["CTRL", "W"], "holdMs": 80 }
+  }
+}

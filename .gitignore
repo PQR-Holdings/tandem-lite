@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Secrets and local configuration
+.env
+.env.local
+.env.*.local
+!.env.example
+computer-profile.json
+
+# Generated runtime artifacts and logs
+artifacts/
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Packaged extension output
+*.vsix
+
+# Editor and operating-system files
+.vscode/
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
