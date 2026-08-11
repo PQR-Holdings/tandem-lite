@@ -1,7 +1,7 @@
 {
   "name": "tandem-lite",
   "displayName": "Tandem Lite",
-  "description": "A local-first VS Code agent for approved developer and Windows desktop tasks.",
+  "description": "A local-first VS Code agent for approved developer and desktop tasks on Windows and macOS.",
   "version": "0.1.39",
   "publisher": "PQRHoldings",
   "author": "PQR LLC",
@@ -44,9 +44,9 @@
         "developerAgent.providers.openai-compatible.model": { "type": "string", "default": "", "description": "OpenAI-compatible planner model. Used whenever that provider is selected." },
         "developerAgent.providers.openai-compatible.endpoint": { "type": "string", "default": "", "description": "OpenAI-compatible API endpoint. Used whenever that provider is selected." },
         "developerAgent.permissions.terminal": { "type": "string", "default": "ask", "enum": ["allow", "ask", "deny"], "description": "Terminal execution policy." },
-        "developerAgent.permissions.windows": { "type": "string", "default": "ask", "enum": ["allow", "ask", "deny"], "description": "Policy for opening Windows applications or folders." },
+        "developerAgent.permissions.windows": { "type": "string", "default": "ask", "enum": ["allow", "ask", "deny"], "description": "Policy for opening applications, files, or folders through the operating system." },
         "developerAgent.permissions.fileScan": { "type": "string", "default": "ask", "enum": ["allow", "ask", "deny"], "description": "Policy for scanning directories outside the workspace." },
-        "developerAgent.permissions.desktopControl": { "type": "string", "default": "ask", "enum": ["allow", "ask", "deny"], "description": "Policy for focusing/closing windows and interacting with accessible Windows controls." },
+        "developerAgent.permissions.desktopControl": { "type": "string", "default": "ask", "enum": ["allow", "ask", "deny"], "description": "Policy for focusing/closing windows and interacting with accessible desktop controls." },
         "developerAgent.execution.timeoutMs": { "type": "number", "default": 600000, "minimum": 30000, "maximum": 1800000, "description": "Maximum execution time for a single approved plan. Full-drive file scans may take several minutes." },
         "developerAgent.permissions.network": { "type": "string", "default": "ask", "enum": ["allow", "ask", "deny"], "description": "External HTTP policy." }
       }

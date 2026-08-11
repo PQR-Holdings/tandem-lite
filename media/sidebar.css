@@ -1,0 +1,83 @@
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
+main { padding: 16px 12px 24px; }
+button, textarea { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 2px; }
+.hero { padding: 16px; border: 1px solid var(--vscode-widget-border, transparent); border-radius: 12px; background: var(--vscode-sideBarSectionHeader-background); }
+.brand { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.brand-copy { flex: 1; min-width: 0; }
+.mark { display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 auto; border-radius: 10px; color: var(--vscode-foreground); background: var(--vscode-editorWidget-background); box-shadow: 0 2px 8px rgba(0,0,0,.2); font-size: 20px; }
+h1 { margin: 0; font-size: 15px; line-height: 1.25; }
+.eyebrow, .shortcut, #status, .activity-detail { color: var(--vscode-descriptionForeground); }
+.eyebrow { margin-top: 2px; font-size: 11px; }
+.icon-button { display: grid; place-items: center; min-width: 26px; min-height: 26px; padding: 4px; border: 0; border-radius: 4px; color: var(--vscode-descriptionForeground); background: transparent; }
+.icon-button:hover { color: var(--vscode-foreground); background: var(--vscode-toolbar-hoverBackground); }
+textarea { width: 100%; min-height: 84px; padding: 9px 10px; resize: vertical; border: 1px solid var(--vscode-input-border, transparent); border-radius: 7px; color: var(--vscode-input-foreground); background: var(--vscode-input-background); line-height: 1.45; }
+textarea::placeholder { color: var(--vscode-input-placeholderForeground); }
+.primary, .secondary, .quiet { min-height: 36px; padding: 7px 10px; border-radius: 7px; }
+.primary { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 9px; border: 1px solid #26395f; color: #fff; background: #0e1324; font-weight: 600; }
+.primary:hover { background: #172544; }
+.primary:disabled { color: var(--vscode-disabledForeground); border-color: var(--vscode-widget-border, transparent); background: var(--vscode-button-secondaryBackground); cursor: not-allowed; opacity: .65; }
+.secondary { flex: 1; border: 1px solid var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
+.secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
+.quiet { flex: 1; border: 1px solid var(--vscode-widget-border, transparent); color: var(--vscode-foreground); background: transparent; }
+.quiet:hover { background: var(--vscode-toolbar-hoverBackground); }
+.quiet.danger { color: var(--vscode-list-errorForeground); }
+.shortcut { margin-top: 7px; font-size: 10px; text-align: center; }
+.status-card, .card { border: 1px solid var(--vscode-widget-border, transparent); background: var(--vscode-editorWidget-background); }
+.status-card { margin-top: 12px; padding: 12px; border-radius: 10px; }
+.status-top { display: flex; align-items: center; gap: 9px; }
+.status-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; }
+.status-copy strong { font-weight: 600; }
+#status { overflow: hidden; font-size: 11px; line-height: 1.4; text-overflow: ellipsis; }
+.status-dot { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%; background: var(--vscode-descriptionForeground); }
+.status-dot.running { background: var(--vscode-progressBar-background); animation: pulse 1.2s infinite; }
+.status-dot.success { background: var(--vscode-testing-iconPassed); }
+.status-dot.warning { background: var(--vscode-list-warningForeground); }
+.status-dot.error { background: var(--vscode-list-errorForeground); }
+.stop-button { position: relative; width: 28px; height: 28px; flex: 0 0 auto; padding: 0; border: 0; border-radius: 4px; color: var(--vscode-list-errorForeground); background: transparent; }
+.stop-button:hover { background: var(--vscode-toolbar-hoverBackground); }
+.stop-button span { position: absolute; inset: 9px; border-radius: 1px; background: currentColor; }
+.progress { height: 3px; margin-top: 10px; overflow: hidden; border-radius: 3px; background: color-mix(in srgb,var(--vscode-progressBar-background) 25%,transparent); }
+.progress span { display: block; width: 38%; height: 100%; background: var(--vscode-progressBar-background); animation: progress 1.4s ease-in-out infinite alternate; }
+.section-head { display: flex; align-items: center; margin: 18px 2px 8px; }
+.section-head h2 { flex: 1; margin: 0; color: var(--vscode-descriptionForeground); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.count { padding: 1px 7px; border-radius: 10px; color: var(--vscode-badge-foreground); background: var(--vscode-badge-background); font-size: 10px; }
+.card { overflow: hidden; border-radius: 9px; }
+#plan { padding: 0; margin: 0; list-style: none; }
+.plan-step { display: grid; grid-template-columns: 20px minmax(0,1fr); gap: 7px; padding: 10px; border-bottom: 1px solid var(--vscode-widget-border, transparent); line-height: 1.4; }
+.plan-step:last-child { border-bottom: 0; }
+.step-icon { display: grid; place-items: center; width: 17px; height: 17px; margin-top: 1px; border: 1px solid currentColor; border-radius: 50%; color: var(--vscode-descriptionForeground); font-size: 10px; font-weight: 600; }
+.step-icon.succeeded { color: var(--vscode-testing-iconPassed); }
+.step-icon.failed { color: var(--vscode-list-errorForeground); }
+.step-icon.unverified { color: var(--vscode-list-warningForeground); }
+.step-icon.executing, .step-icon.retrying { color: var(--vscode-progressBar-background); }
+.review-note { margin: 0; padding: 10px; border-top: 1px solid var(--vscode-widget-border, transparent); color: var(--vscode-descriptionForeground); font-size: 10px; line-height: 1.45; }
+#planActions, #editorActions { padding: 10px; border-top: 1px solid var(--vscode-widget-border, transparent); }
+#planActions .primary { margin-top: 0; }
+.button-row { display: flex; gap: 8px; margin-top: 8px; }
+.plan-editor { min-height: 180px; border: 0; border-top: 1px solid var(--vscode-widget-border, transparent); border-radius: 0; font-family: var(--vscode-editor-font-family); font-size: var(--vscode-editor-font-size); }
+.timeline { padding: 3px 0; }
+.activity-row { display: grid; grid-template-columns: 9px minmax(0,1fr); gap: 9px; padding: 8px 10px; }
+.activity-row + .activity-row { border-top: 1px solid var(--vscode-widget-border, transparent); }
+.activity-dot { width: 7px; height: 7px; margin-top: 5px; border-radius: 50%; background: var(--vscode-descriptionForeground); }
+.activity-row.success .activity-dot { background: var(--vscode-testing-iconPassed); }
+.activity-row.error .activity-dot { background: var(--vscode-list-errorForeground); }
+.activity-row.warning .activity-dot { background: var(--vscode-list-warningForeground); }
+.activity-title { line-height: 1.4; }
+.activity-detail { margin-top: 2px; font-size: 10px; }
+.details-card { margin-top: 18px; }
+.details-card summary { display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 8px 10px; cursor: pointer; list-style: none; font-weight: 600; }
+.details-card summary::-webkit-details-marker { display: none; }
+.details-card summary > span:first-child { flex: 1; }
+.chevron { color: var(--vscode-descriptionForeground); transition: transform .15s ease; }
+.details-card[open] .chevron { transform: rotate(90deg); }
+pre { max-height: 260px; margin: 0; padding: 10px; overflow: auto; border-top: 1px solid var(--vscode-widget-border, transparent); white-space: pre-wrap; word-break: break-word; color: var(--vscode-descriptionForeground); background: var(--vscode-textCodeBlock-background); font-family: var(--vscode-editor-font-family); font-size: var(--vscode-editor-font-size); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+[hidden] { display: none !important; }
+@keyframes pulse { 50% { opacity: .35; } }
+@keyframes progress { from { transform: translateX(-55%); } to { transform: translateX(210%); } }
+@media (max-width: 220px) { .button-row { flex-direction: column; } .brand { gap: 7px; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
