@@ -3,7 +3,7 @@
 body { margin: 0; color: var(--vscode-foreground); background: var(--vscode-editor-background); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
 main { width: min(680px, 100%); padding: 24px 20px 48px; }
 .hero { display: flex; align-items: center; gap: 12px; padding: 16px; margin-bottom: 14px; border: 1px solid var(--vscode-widget-border, transparent); border-radius: 12px; background: var(--vscode-sideBarSectionHeader-background); }
-.hero .mark { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 auto; border-radius: 10px; background: var(--vscode-editorWidget-background); box-shadow: 0 2px 8px rgba(0,0,0,.2); font-size: 21px; }
+.hero .mark { width: 40px; height: 40px; flex: 0 0 auto; border-radius: 10px; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
 h1 { margin: 0; font-size: 18px; }
 .hero p, .section-heading p, .hint, #result { color: var(--vscode-descriptionForeground); }
 .hero p { margin: 3px 0 0; }

@@ -63,7 +63,8 @@ class AgentSidebarProvider {
     this.view = view; view.webview.options = { enableScripts: true };
     const scriptUri = view.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'sidebar.js'));
     const styleUri = view.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'sidebar.css'));
-    view.webview.html = this.html(scriptUri, styleUri, view.webview.cspSource);
+    const iconUri = view.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'icon.png'));
+    view.webview.html = this.html(scriptUri, styleUri, iconUri, view.webview.cspSource);
     view.webview.onDidReceiveMessage(async (message) => {
       this.output.appendLine(`Sidebar message received: ${message.type}`);
       try {
@@ -92,7 +93,8 @@ class AgentSidebarProvider {
     this.settingsPanel = panel;
     const scriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'settings.js'));
     const styleUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'settings.css'));
-    panel.webview.html = this.settingsHtml(scriptUri, styleUri, panel.webview.cspSource);
+    const iconUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'icon.png'));
+    panel.webview.html = this.settingsHtml(scriptUri, styleUri, iconUri, panel.webview.cspSource);
     panel.onDidDispose(() => { if (this.settingsPanel === panel) this.settingsPanel = undefined; });
     panel.webview.onDidReceiveMessage(async (message) => { if (message.type === 'ready') panel.webview.postMessage({ type: 'settings', settings: this.publicSettings() }); if (message.type === 'saveSettings') await this.saveSettings(message.settings); });
   }
@@ -112,11 +114,11 @@ class AgentSidebarProvider {
     if (provider !== 'ollama' && settings.apiKey?.trim()) await this.context.secrets.store(`developerAgent.${provider}.apiKey`, settings.apiKey.trim());
     this.settingsPanel?.webview.postMessage({ type: 'settingsSaved', settings: this.publicSettings() });
   }
-  settingsHtml(scriptUri, styleUri, cspSource) { return `<!doctype html>
+  settingsHtml(scriptUri, styleUri, iconUri, cspSource) { return `<!doctype html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource}; script-src ${cspSource};">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${cspSource}; style-src ${cspSource}; script-src ${cspSource};">
 <link rel="stylesheet" href="${styleUri}"><title>Tandem Lite Settings</title></head><body><main>
-<header class="hero"><span class="mark" aria-hidden="true">&#10022;</span><div><h1>Tandem Lite</h1><p>Agent settings</p></div></header>
+<header class="hero"><img class="mark" src="${iconUri}" alt=""><div><h1>Tandem Lite</h1><p>Agent settings</p></div></header>
 <form id="settingsForm">
 <section class="card"><div class="section-heading"><h2>Model provider</h2><p>Choose where Tandem creates plans.</p></div>
 <label>Provider<select id="provider"><option value="ollama">Ollama</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="openai-compatible">OpenAI-compatible</option></select></label>
@@ -187,11 +189,11 @@ ${[['Terminal commands','permissionTerminal','Run commands in the workspace.'],[
       }
     } catch (error) { if (runId !== this.runId || error.message === 'Execution stopped by user.') return; this.state = { ...this.state, status: 'failed', error: error.message }; this.status.text = '$(error) Agent'; this.render(); this.output.appendLine(error.stack || error.message); }
   }
-  html(scriptUri, styleUri, cspSource) {
+  html(scriptUri, styleUri, iconUri, cspSource) {
     return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource}; script-src ${cspSource};">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${cspSource}; style-src ${cspSource}; script-src ${cspSource};">
       <link rel="stylesheet" href="${styleUri}"><title>Tandem Lite</title></head><body>
-      <main><section class="hero"><div class="brand"><span class="mark" aria-hidden="true">&#10022;</span><div class="brand-copy"><h1>Tandem Lite</h1><div class="eyebrow">Your execution companion</div></div><button id="settings" class="icon-button" aria-label="Open settings" title="Open settings">&#9881;</button></div>
+      <main><section class="hero"><div class="brand"><img class="mark" src="${iconUri}" alt=""><div class="brand-copy"><h1>Tandem Lite</h1><div class="eyebrow">Your execution companion</div></div><button id="settings" class="icon-button" aria-label="Open settings" title="Open settings">&#9881;</button></div>
       <label class="sr-only" for="input">Objective</label><textarea id="input" placeholder="Describe what you want Tandem to do…"></textarea>
       <button id="run" class="primary"><span aria-hidden="true">&#10022;</span><span>Create plan</span></button><div class="shortcut">Ctrl/&#8984; + Enter</div></section>
       <section class="status-card" aria-live="polite"><div class="status-top"><span id="statusDot" class="status-dot neutral"></span><div class="status-copy"><strong id="statusTitle">Ready for an objective</strong><span id="status">Describe a task to create a reviewable plan.</span></div><button id="stop" class="stop-button" hidden aria-label="Stop active work" title="Stop active work"><span></span></button></div><div id="progress" class="progress" hidden><span></span></div></section>

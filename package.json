@@ -5,6 +5,7 @@
   "version": "0.1.39",
   "publisher": "PQRHoldings",
   "author": "PQR LLC",
+  "icon": "media/icon.png",
   "license": "MIT",
   "private": true,
   "type": "commonjs",
