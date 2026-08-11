@@ -3,6 +3,15 @@ const cp = require('node:child_process');
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
+const { createProvider } = require('../runtime/models/providers');
+
+const PROVIDERS = {
+  ollama: { model: 'qwen3:4b', endpoint: 'http://127.0.0.1:11434', requiresKey: false },
+  openai: { model: 'gpt-5.6-terra', endpoint: 'https://api.openai.com/v1', requiresKey: true },
+  anthropic: { model: 'claude-sonnet-5', endpoint: 'https://api.anthropic.com/v1', requiresKey: true },
+  gemini: { model: 'gemini-3.6-flash', endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai', requiresKey: true },
+  'openai-compatible': { model: '', endpoint: '', requiresKey: true }
+};
 
 class StatusNarrator {
   async describe(phase, detail, config) {
@@ -85,22 +94,30 @@ class AgentSidebarProvider {
     const config = vscode.workspace.getConfiguration('developerAgent');
     const provider = config.get('model.provider');
     const profile = (name) => ({ model: config.get(`providers.${name}.model`, ''), endpoint: config.get(`providers.${name}.endpoint`, '') });
-    return { provider, profiles: { ollama: profile('ollama'), openai: profile('openai'), anthropic: profile('anthropic'), 'openai-compatible': profile('openai-compatible') }, advanced: { visionFallback: config.get('model.visionFallback'), statusModel: config.get('model.statusModel'), planningTimeoutMs: config.get('model.planningTimeoutMs'), executionTimeoutMs: config.get('execution.timeoutMs'), permissions: { terminal: config.get('permissions.terminal'), windows: config.get('permissions.windows'), desktopControl: config.get('permissions.desktopControl'), fileScan: config.get('permissions.fileScan'), network: config.get('permissions.network') } } };
+    return { provider, profiles: Object.fromEntries(Object.keys(PROVIDERS).map((name) => [name, profile(name)])), advanced: { visionFallback: config.get('model.visionFallback'), statusModel: config.get('model.statusModel'), planningTimeoutMs: config.get('model.planningTimeoutMs'), executionTimeoutMs: config.get('execution.timeoutMs'), permissions: { terminal: config.get('permissions.terminal'), windows: config.get('permissions.windows'), desktopControl: config.get('permissions.desktopControl'), fileScan: config.get('permissions.fileScan'), network: config.get('permissions.network') } } };
   }
   openSettingsPanel() {
     if (this.settingsPanel) { this.settingsPanel.reveal(vscode.ViewColumn.Active); this.settingsPanel.webview.postMessage({ type: 'settings', settings: this.publicSettings() }); return; }
-    const panel = vscode.window.createWebviewPanel('developerAgent.settings', 'Developer Agent Settings', vscode.ViewColumn.Active, { enableScripts: true });
+    const panel = vscode.window.createWebviewPanel('developerAgent.settings', 'Tandem Lite Settings', vscode.ViewColumn.Active, { enableScripts: true });
     this.settingsPanel = panel;
     const scriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'settings.js'));
     const styleUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'settings.css'));
     const iconUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'icon.png'));
     panel.webview.html = this.settingsHtml(scriptUri, styleUri, iconUri, panel.webview.cspSource);
     panel.onDidDispose(() => { if (this.settingsPanel === panel) this.settingsPanel = undefined; });
-    panel.webview.onDidReceiveMessage(async (message) => { if (message.type === 'ready') panel.webview.postMessage({ type: 'settings', settings: this.publicSettings() }); if (message.type === 'saveSettings') await this.saveSettings(message.settings); });
+    panel.webview.onDidReceiveMessage(async (message) => {
+      try {
+        if (message.type === 'ready') panel.webview.postMessage({ type: 'settings', settings: this.publicSettings() });
+        if (message.type === 'saveSettings') await this.saveSettings(message.settings);
+        if (message.type === 'testConnection') await this.testConnection(message.settings);
+      } catch (error) { panel.webview.postMessage({ type: 'settingsError', error: error.message }); }
+    });
   }
   async saveSettings(settings = {}) {
     const provider = settings.provider;
-    if (!['ollama', 'openai', 'anthropic', 'openai-compatible'].includes(provider)) throw new Error('Unsupported provider.');
+    if (!PROVIDERS[provider]) throw new Error('Unsupported provider.');
+    if (!settings.model?.trim() || !settings.endpoint?.trim()) throw new Error('A model and endpoint are required.');
+    if (PROVIDERS[provider].requiresKey && !settings.apiKey?.trim() && !await this.context.secrets.get(`developerAgent.${provider}.apiKey`)) throw new Error(`Enter an API key for ${provider}.`);
     const config = vscode.workspace.getConfiguration('developerAgent');
     await config.update('model.provider', provider, vscode.ConfigurationTarget.Global);
     await config.update(`providers.${provider}.model`, settings.model || '', vscode.ConfigurationTarget.Global);
@@ -114,6 +131,16 @@ class AgentSidebarProvider {
     if (provider !== 'ollama' && settings.apiKey?.trim()) await this.context.secrets.store(`developerAgent.${provider}.apiKey`, settings.apiKey.trim());
     this.settingsPanel?.webview.postMessage({ type: 'settingsSaved', settings: this.publicSettings() });
   }
+  async testConnection(settings = {}) {
+    try {
+      if (!PROVIDERS[settings.provider]) throw new Error('Unsupported provider.');
+      const apiKey = settings.provider === 'ollama' ? undefined : settings.apiKey?.trim() || await this.context.secrets.get(`developerAgent.${settings.provider}.apiKey`);
+      if (PROVIDERS[settings.provider].requiresKey && !apiKey) throw new Error('Enter an API key or save one first.');
+      const adapter = createProvider({ provider: settings.provider, model: settings.model, endpoint: settings.endpoint, apiKey });
+      await adapter.generate([{ role: 'user', content: 'Reply with OK.' }], { timeoutMs: 10000, maxTokens: 8 });
+      this.settingsPanel?.webview.postMessage({ type: 'connectionResult', ok: true });
+    } catch (error) { this.settingsPanel?.webview.postMessage({ type: 'connectionResult', ok: false, error: error.message }); }
+  }
   settingsHtml(scriptUri, styleUri, iconUri, cspSource) { return `<!doctype html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${cspSource}; style-src ${cspSource}; script-src ${cspSource};">
@@ -121,35 +148,36 @@ class AgentSidebarProvider {
 <header class="hero"><img class="mark" src="${iconUri}" alt=""><div><h1>Tandem Lite</h1><p>Agent settings</p></div></header>
 <form id="settingsForm">
 <section class="card"><div class="section-heading"><h2>Model provider</h2><p>Choose where Tandem creates plans.</p></div>
-<label>Provider<select id="provider"><option value="ollama">Ollama</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="openai-compatible">OpenAI-compatible</option></select></label>
+<label>Provider<select id="provider"><option value="ollama">Ollama</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="gemini">Google Gemini</option><option value="openai-compatible">OpenAI-compatible</option></select></label>
 <label>Model<input id="model" autocomplete="off"><span class="hint">The model used to create reviewable plans.</span></label>
 <label>Endpoint<input id="endpoint" inputmode="url" autocomplete="url"></label>
 <label id="keyLabel">API key<input id="apiKey" type="password" autocomplete="off" placeholder="Leave blank to keep the stored key"><span class="hint">Stored securely by VS Code SecretStorage.</span></label></section>
 <section class="card"><div class="section-heading"><h2>Agent behavior</h2><p>Control fallback models and runtime limits.</p></div>
 <label>Vision fallback model<input id="visionFallback" autocomplete="off"></label>
-<label>Status model<input id="statusModel" autocomplete="off"><span class="hint">Leave blank to use built-in status text.</span></label>
+<label>Ollama status model<input id="statusModel" autocomplete="off"><span class="hint">Used only with Ollama. Other providers use built-in status text.</span></label>
 <div class="field-grid"><label>Planning timeout (ms)<input id="planningTimeoutMs" type="number" min="3000" max="60000"></label><label>Execution timeout (ms)<input id="executionTimeoutMs" type="number" min="30000" max="1800000"></label></div></section>
 <section class="card"><div class="section-heading"><h2>Permissions</h2><p>Choose whether each capability is allowed, denied, or asks first.</p></div>
 ${[['Terminal commands','permissionTerminal','Run commands in the workspace.'],['Open apps and paths','permissionWindows','Open applications, files, and folders.'],['Control windows and UI','permissionDesktopControl','Interact with accessible desktop controls.'],['Scan outside workspace','permissionFileScan','Read directories beyond the open workspace.'],['External network','permissionNetwork','Make requests to external services.']].map(([label,id,hint]) => `<label class="permission"><span><strong>${label}</strong><small>${hint}</small></span><select id="${id}" aria-label="${label}"><option value="ask">Ask</option><option value="allow">Allow</option><option value="deny">Deny</option></select></label>`).join('')}</section>
-<div class="save-row"><button id="save" type="submit">Save settings</button><div id="result" role="status" aria-live="polite"></div></div>
+<div class="save-row"><button id="save" type="submit">Save settings</button><button id="testConnection" class="secondary" type="button">Test connection</button><div id="result" role="status" aria-live="polite"></div></div>
 </form></main><script src="${scriptUri}"></script></body></html>`; }
   setStepState(step, status) { if (!step?.id) return; this.state.stepStates = { ...(this.state.stepStates || {}), [step.id]: status }; this.render(); }
   async narrate(phase, detail) {
     const ticket = ++this.narrationSequence; const entry = { phase, text: `${phase}${detail ? `: ${detail}` : ''}` }; this.state.activity = [...(this.state.activity || []), entry]; this.state.statusText = entry.text; this.render();
-    const config = vscode.workspace.getConfiguration('developerAgent'); const text = await this.narrator.describe(phase, detail, { model: config.get('model.statusModel'), endpoint: config.get('model.endpoint') });
+    const config = vscode.workspace.getConfiguration('developerAgent'); const isOllama = config.get('model.provider') === 'ollama'; const text = await this.narrator.describe(phase, detail, { model: isOllama ? config.get('model.statusModel') : '', endpoint: config.get('providers.ollama.endpoint') });
     entry.text = text; if (ticket === this.narrationSequence) this.state.statusText = text; this.render();
   }
   stop() { this.runId += 1; this.client.stop(); this.state = { ...this.state, status: 'stopped', error: 'Execution stopped by user.', outputs: [] }; this.status.text = '$(debug-stop) Agent Stopped'; this.render(); this.narrate('Cancelling', 'Stopping the active work'); }
   async modelConfig() {
     const config = vscode.workspace.getConfiguration('developerAgent'); const provider = config.get('model.provider');
-    const plannerSetting = config.inspect('model.planner');
-    const configuredPlanner = plannerSetting?.workspaceValue ?? plannerSetting?.globalValue ?? plannerSetting?.workspaceFolderValue;
-    const profileModel = config.get(`providers.${provider}.model`);
-    const profileEndpoint = config.get(`providers.${provider}.endpoint`);
-    const legacyModel = configuredPlanner || config.get('model.model');
-    const model = profileModel || (provider === 'openai' && (!legacyModel || legacyModel === 'qwen3:4b') ? 'gpt-5-mini' : legacyModel);
-    const endpoint = profileEndpoint || (provider === 'openai' ? 'https://api.openai.com/v1' : config.get('model.endpoint'));
-    return { provider, model, visionModel: config.get('model.visionFallback'), planningTimeoutMs: config.get('model.planningTimeoutMs'), endpoint, apiKey: provider === 'ollama' ? undefined : await this.context.secrets.get(`developerAgent.${provider}.apiKey`) };
+    const defaults = PROVIDERS[provider];
+    if (!defaults) throw new Error(`Unsupported model provider: ${provider}`);
+    const model = config.get(`providers.${provider}.model`) || defaults.model;
+    const endpoint = config.get(`providers.${provider}.endpoint`) || defaults.endpoint;
+    const apiKey = defaults.requiresKey ? await this.context.secrets.get(`developerAgent.${provider}.apiKey`) : undefined;
+    if (!model) throw new Error(`Configure a model for ${provider}.`);
+    if (!endpoint) throw new Error(`Configure an endpoint for ${provider}.`);
+    if (defaults.requiresKey && !apiKey) throw new Error(`Set an API key for ${provider} before planning.`);
+    return { provider, model, visionModel: config.get('model.visionFallback'), planningTimeoutMs: config.get('model.planningTimeoutMs'), endpoint, apiKey };
   }
   async plan(objective) {
     if (!objective?.trim()) return;
@@ -205,22 +233,22 @@ ${[['Terminal commands','permissionTerminal','Run commands in the workspace.'],[
 }
 
 function activate(context) {
-  const output = vscode.window.createOutputChannel('Developer Agent'); const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left); status.text = '$(sparkle) Agent'; status.command = 'developerAgent.showActivity'; status.show();
+  const output = vscode.window.createOutputChannel('Tandem Lite'); const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left); status.text = '$(sparkle) Tandem Lite'; status.command = 'developerAgent.showActivity'; status.show();
   const sidebar = new AgentSidebarProvider(context, output, status);
   async function configureProvider() {
     const config = vscode.workspace.getConfiguration('developerAgent');
-    const provider = await vscode.window.showQuickPick(['ollama', 'openai', 'anthropic', 'openai-compatible'], { placeHolder: 'Select the model provider' });
+    const provider = await vscode.window.showQuickPick(Object.keys(PROVIDERS), { placeHolder: 'Select the model provider' });
     if (!provider) return;
     await config.update('model.provider', provider, vscode.ConfigurationTarget.Global);
     const modelKey = `providers.${provider}.model`; const endpointKey = `providers.${provider}.endpoint`;
-    const fallbackModel = provider === 'openai' ? 'gpt-5-mini' : provider === 'ollama' ? 'qwen3:4b' : '';
+    const fallbackModel = PROVIDERS[provider].model;
     const model = await vscode.window.showInputBox({ prompt: `${provider} planner model`, value: config.get(modelKey, fallbackModel), ignoreFocusOut: true });
     if (model !== undefined) await config.update(modelKey, model, vscode.ConfigurationTarget.Global);
-    const fallbackEndpoint = provider === 'openai' ? 'https://api.openai.com/v1' : provider === 'ollama' ? 'http://127.0.0.1:11434' : '';
+    const fallbackEndpoint = PROVIDERS[provider].endpoint;
     const endpoint = await vscode.window.showInputBox({ prompt: `${provider} endpoint`, value: config.get(endpointKey, fallbackEndpoint), ignoreFocusOut: true });
     if (endpoint !== undefined) await config.update(endpointKey, endpoint, vscode.ConfigurationTarget.Global);
     if (provider !== 'ollama') await vscode.commands.executeCommand('developerAgent.setApiKey');
-    vscode.window.showInformationMessage(`Developer Agent configured for ${provider}.`);
+    vscode.window.showInformationMessage(`Tandem Lite configured for ${provider}.`);
   }
   async function askAndRun() { const objective = await vscode.window.showInputBox({ prompt: 'What should the agent do?' }); if (objective) sidebar.plan(objective); }
   context.subscriptions.push(vscode.window.registerWebviewViewProvider('developerAgent.sidebar', sidebar), output, status,

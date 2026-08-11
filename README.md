@@ -1,6 +1,8 @@
 # Tandem Lite
 
-Tandem Lite is an open-source, local-first VS Code extension for planning and carrying out approved developer and desktop tasks on Windows and macOS. It uses an LLM to create a short tool-based plan, shows that plan for review, and verifies each completed step where a reliable postcondition is available.
+> **Beta:** Tandem Lite is under active development. Review every plan before approval and avoid using it for unattended or production-critical automation.
+
+Tandem Lite is an open-source VS Code execution companion for planning and carrying out approved developer and desktop tasks on Windows and macOS. It can use a local Ollama model or an explicitly configured hosted provider. Tandem creates a short tool-based plan, shows that plan for review, and verifies each completed step where a reliable postcondition is available.
 
 Tandem Lite is a PQR LLC product.
 
@@ -21,7 +23,7 @@ The model selects only from this explicit tool set. It cannot gain arbitrary she
 
 ## How a task runs
 
-1. Enter an objective in the Tandem Lite sidebar and select **Execute**.
+1. Enter an objective in the Tandem Lite sidebar and select **Create plan**.
 2. Tandem Lite asks the configured model for an executable plan.
 3. Review the plan, then **Approve**, **Deny**, or **Modify** it.
 4. The runtime executes one step at a time, asks for permissions when required, verifies results, and retries a failed step with a distinct recovery action up to five times.
@@ -34,10 +36,10 @@ The sidebar keeps the plan, step state, activity, output, and errors visible whi
 Install a packaged `.vsix` from VS Code:
 
 ```sh
-code --install-extension developer-computer-agent-<version>.vsix
+code --install-extension tandem-lite-<version>.vsix
 ```
 
-Then open the **Agent** view in the Activity Bar.
+Then open the **Tandem Lite** view in the Activity Bar.
 
 For local development, open this folder in VS Code and run the extension with the Extension Development Host (`F5`).
 
@@ -50,6 +52,7 @@ Supported planner providers:
 - Ollama (default): local endpoint `http://127.0.0.1:11434`
 - OpenAI
 - Anthropic
+- Google Gemini
 - OpenAI-compatible endpoints
 
 For local testing, `qwen3:4b` is the default planner. `qwen3:1.7b` is faster but less reliable for multi-step planning. The status model is optional and only produces short sidebar status text.
@@ -59,6 +62,8 @@ For local testing, `qwen3:4b` is the default planner. `qwen3:1.7b` is faster but
 The extension uses tool-specific policy settings. By default, actions such as terminal execution, opening locations/apps, searching outside the workspace, and controlling a window/UI require approval. Permissions can be changed in the Settings panel.
 
 Approval is intentionally not a substitute for reviewing a plan. Before approving, verify that the listed paths, commands, applications, and UI actions are what you intended.
+
+Tandem Lite is beta software. Do not use it for unattended automation, destructive production operations, or tasks where a mistaken command could cause unrecoverable loss. Recovery steps may differ from the original plan and should be reviewed through the permission prompts presented by the extension.
 
 Tandem Lite does not bypass operating-system permissions, application security controls, anti-cheat systems, Windows UAC boundaries, or macOS privacy controls.
 
@@ -74,7 +79,9 @@ macOS may display the permission prompt the first time Tandem attempts an Access
 
 ## Privacy
 
-Tandem Lite does not include product telemetry and does not upload workspace data to a Tandem-operated service. With Ollama, model requests stay on the configured local endpoint. If you select OpenAI, Anthropic, or another compatible remote provider, the objective, available tool descriptions, and relevant plan/recovery context are sent to that provider so it can create a plan. Review your chosen provider's privacy terms before using it with sensitive workspaces.
+Tandem Lite does not include product telemetry and does not upload workspace data to a Tandem-operated service. With Ollama, model requests stay on the configured endpoint. If you select OpenAI, Anthropic, Gemini, or another compatible remote provider, the objective, workspace path, available tool descriptions, failed-step details, and relevant plan/recovery context may be sent to that provider so it can create or repair a plan. Terminal output and tool results may be included in recovery context. Tandem Lite stores hosted-provider API keys in VS Code SecretStorage.
+
+Do not use hosted providers with confidential tasks or workspaces unless your organization permits it and you have reviewed that provider's data-handling terms. See [PRIVACY.md](PRIVACY.md) for the beta data-handling statement.
 
 ## Current limitations
 
@@ -83,6 +90,8 @@ Tandem Lite does not include product telemetry and does not upload workspace dat
 - The configured vision fallback model is reserved for future screenshot-based control; the current extension does **not** yet perform screenshot/vision fallback.
 - Some desktop actions can only be verified as “requested” or “inconclusive” because operating systems do not always expose the resulting state to accessibility or shell APIs.
 - Desktop controls are newly implemented and should be treated as experimental until they have broader end-to-end compatibility coverage.
+- Active plans and activity history are not currently restored after an extension-host or VS Code restart.
+- Provider availability, quotas, and model identifiers are controlled by their respective providers and may change.
 
 ## Development
 
@@ -101,7 +110,7 @@ Local secrets, profiles, generated runtime artifacts, dependencies, editor state
 
 ## Support, security, and contributing
 
-For help with Tandem Lite, email [partners@pqr.llc](mailto:partners@pqr.llc) or open a GitHub issue that does not contain credentials, private source code, or other sensitive data. This repository also includes SUPPORT.md, SECURITY.md, and CONTRIBUTING.md.
+For help with Tandem Lite, email [partners@pqr.llc](mailto:partners@pqr.llc) or open a GitHub issue that does not contain credentials, private source code, or other sensitive data. This repository also includes [SUPPORT.md](SUPPORT.md), [SECURITY.md](SECURITY.md), [PRIVACY.md](PRIVACY.md), [CHANGELOG.md](CHANGELOG.md), and [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
