@@ -25,6 +25,19 @@ async function windowsFolderOpen(target) {
   return false;
 }
 
+async function macPathOpen(target) {
+  if (process.platform !== 'darwin') return false;
+  const script = 'tell application "Finder" to get POSIX path of (target of front Finder window as alias)';
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    try {
+      const { stdout } = await run('/usr/bin/osascript', ['-e', script]);
+      if (String(stdout).trim().replace(/\/$/, '') === String(target).replace(/\/$/, '')) return true;
+    } catch { /* Finder may not have a readable front window yet. */ }
+    await delay(250);
+  }
+  return false;
+}
+
 class VerificationEngine {
   async verify(expected) {
     if (!expected) return { status: 'unknown', detail: 'No expected state supplied.' };
@@ -35,13 +48,14 @@ class VerificationEngine {
       try { const response = await fetch(expected.url); return { status: response.status === expected.status ? 'verified' : 'failed', actualStatus: response.status, expected }; }
       catch (error) { return { status: 'failed', error: error.message, expected }; }
     }
-    if (expected.type === 'windows_folder_open') {
+    if (expected.type === 'windows_folder_open' || expected.type === 'native_path_open') {
       const exists = await fs.access(expected.path).then(() => true).catch(() => false);
-      const open = exists && await windowsFolderOpen(expected.path);
-      return { status: open ? 'verified' : 'inconclusive', expected, detail: open ? 'Explorer is displaying the requested folder.' : 'Explorer launch completed, but the Windows Shell API did not expose a matching folder window for confirmation.' };
+      const open = exists && (process.platform === 'darwin' ? await macPathOpen(expected.path) : await windowsFolderOpen(expected.path));
+      const manager = process.platform === 'darwin' ? 'Finder' : 'Explorer';
+      return { status: open ? 'verified' : 'inconclusive', expected, detail: open ? `${manager} is displaying the requested folder.` : `${manager} launch completed, but the operating system did not expose a matching folder window for confirmation.` };
     }
     return { status: 'unknown', detail: `Unsupported verifier ${expected.type}`, expected };
   }
 }
 
-module.exports = { VerificationEngine, portListening, windowsFolderOpen };
+module.exports = { VerificationEngine, portListening, windowsFolderOpen, macPathOpen };

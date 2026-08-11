@@ -25,7 +25,7 @@ async function findLargestFiles(root, limit = 1, onProgress, extensions = []) {
 function createWindowsFilesTool() {
   return {
     name: 'windows.find_files',
-    description: 'Search a Windows directory tree for files, optionally filtered by extensions. Input: { root: "C:\\\\" or another absolute path, extensions: [".jpg"], limit: positive integer }. It returns the largest matching files and skips inaccessible files.',
+    description: 'Search a local directory tree for files, optionally filtered by extensions. Input: { root: "absolute path", extensions: [".jpg"], limit: positive integer }. It returns the largest matching files and skips inaccessible files.',
     permissions: ['files.scan'],
     getVerification(input, result) { return result?.files?.[0] ? { type: 'file_exists', path: result.files[0].path } : undefined; },
     async execute(input = {}, context = {}) {
