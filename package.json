@@ -2,7 +2,7 @@
   "name": "tandem-lite",
   "displayName": "Tandem Lite - Your Execution Companion",
   "description": "Beta execution companion for reviewable developer and desktop automation on Windows and macOS, with local and hosted model support.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "PQRHoldings",
   "author": "PQR LLC",
   "preview": true,
