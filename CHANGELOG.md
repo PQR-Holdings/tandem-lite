@@ -2,6 +2,12 @@
 
 All notable Tandem Lite changes will be documented here.
 
+## 0.2.2
+
+- Repositioned the Marketplace listing around AI automation and robotic process automation (RPA).
+- Added focused Marketplace categories and search keywords for improved discovery.
+- Updated the sidebar tagline and README product description.
+
 ## 0.2.0 — Beta
 
 - Redesigned the sidebar, settings experience, Marketplace icon, and Activity Bar icon.

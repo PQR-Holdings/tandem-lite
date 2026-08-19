@@ -1,10 +1,8 @@
-# Tandem Lite
+# Tandem Lite — AI Automation & RPA for VS Code
 
 > **Beta:** Tandem Lite is under active development. Review every plan before approval and avoid using it for unattended or production-critical automation.
 
-Tandem Lite is an open-source VS Code execution companion for planning and carrying out approved developer and desktop tasks on Windows and macOS. It can use a local Ollama model or an explicitly configured hosted provider. Tandem creates a short tool-based plan, shows that plan for review, and verifies each completed step where a reliable postcondition is available.
-
-Tandem Lite is a PQR LLC product.
+Tandem Lite is an open-source AI automation and robotic process automation (RPA) extension for planning and carrying out approved developer and desktop workflows in VS Code on Windows and macOS. It can use a local Ollama model or an explicitly configured hosted provider. Tandem creates a short tool-based plan, shows that plan for review, and verifies each completed step where a reliable postcondition is available.
 
 ## What it can do
 
